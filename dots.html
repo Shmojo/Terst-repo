@@ -1,48 +1,18 @@
 <!DOCTYPE HTML>
-<html>
-<!-- 
-Craig, edit this page and update the git repo when done:
+<html> <!-- manifest="cache.manifest" -->
+  <title>Dots!</title>
+  <meta name="aple-mobile-web-app-capable" content="yes" />
+  <meta name="viewport"  ontent="user-scalable=no, width=device-width" />
 
-  git add dots.html
-  git commit -m "Added dots game"
-  git push
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="apple-touch-startup-image" href="./apple-touch-startup-image.png" />
 
-  edit stuff
+  <link rel="stylesheet" type="text/css" media="screen" href="dots.css">
 
-  git add dots.html
-  git commit -m "Updated dots game"
-  git push
-
-  etcetera, etcetera
--->
-<body>
-
-<canvas id="myCanvas" width="400" height="400" style="border:1px solid #c3c3c3;">
-Your browser does not support the canvas element.
-</canvas>
-
-<script type="text/javascript">
-
-var c=document.getElementById("myCanvas");
-var cxt=c.getContext("2d");
-
-
-<!-- use a couple of for loops, draw one circle for each pass through the nested loop -->
-
-var c=document.getElementById("myCanvas");
-var cxt=c.getContext("2d");
-
-for ( i =0; i<10; ++i ) {
-for ( j =0; j<10; ++j ) {
-    cxt.beginPath();
-    cxt.arc( i*51+20,  j*51+20, 5, 0, Math.PI*2, true);
-    cxt.closePath();
-    cxt.fill();
-   }
-}
-</script>
-
-</body>
+  <script type="text/javascript" src="dots.js"></script>
+  <body>
+    <canvas id="default_canvas" width="400" height="400">Your browser does not support the canvas element.</canvas>
+  </body>
 </html>
 
 
