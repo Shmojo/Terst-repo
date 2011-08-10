@@ -1,8 +1,3 @@
-// from matt.might.net/articles/how-to-native-iphone-ipad-apps-in-javascript/
-var block_elastic_scrolling = function(event) { // tell safari not to move window
-  event.preventDefault();
-}
-
 // from https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
 if (!Function.prototype.bind) {
 
@@ -31,7 +26,7 @@ var merge_options = function(from,to) {
       if ( !to[property] ) 
         to[property] = from[property]
       else
-        copy_properties( from[property], to[property] );
+        merge_options( from[property], to[property] );
     } else {
       to[property] = from[property];
     }
@@ -46,39 +41,7 @@ var console_log = function(msg) {
 
 
 
-// Touch events
-//
-var touch_start = function(e) {
-  console_log("Touch Start:");
-  console_log(e); 
-    // touches[], targetTouches[], changedTouches[]
-      // clientX, clientY, screenX, screenY, pageX, pageY, target, identifier
-};
-
-var touch_end = function(e) {
-  console_log("Touch End:");
-  console_log(e);
-};
-
-var touch_move = function(e) {
-  console_log("Touch Move:");
-  console_log(e);
-};
-
-var touch_cancel = function(e) {
-  console_log("Touch Cancel:");
-  console_log(e);
-};
-
-
-// set up event handlers
-var setup_event_handlers = function() {
-  document.body.ontouchstart = touch_start.bind(window.dots);
-  document.body.ontouchmove = touch_move.bind(window.dots);
-  document.body.ontouchend = touch_end.bind(window.dots);
-};
-
-
+var supportsTouch = 'createTouch' in document;
 
 var Dots = function(options) {
   this.options = merge_options( options||{}, { 
@@ -90,8 +53,83 @@ var Dots = function(options) {
   });
 };
 
-Dots.prototype.createOrFindCanvas = function(name) {
-  console_log("Finding canvas");
+// Touch events
+// on~
+  // touchstart, touchend, touchmove
+  // gesturestart - a scale or a rotation starts.
+  // gesturechange - a scale or a rotation.
+  // gestureend 
+//
+// body.onorientationchange
+//
+Dots.prototype.defaultEventHandlers = function(options) {
+  var _options = merge_options( options||{}, { 
+    preventScrolling: true 
+  });
+
+      // event properties:
+      // ( touches[] | targetTouches[] | changedTouches[] ) 
+      // each of these have properties { clientX, clientY, screenX, screenY, pageX, pageY, target, identifier }
+  return { 
+    touchstart: function(e) {
+      console_log("Touch Start:");
+
+      if (options.preventScrolling) e.preventDefault();
+
+      if ( e.touches.length == 1 ) {
+        // start line candidate: 
+        //   find closest point to evet touch down
+        var x = event.touches[0].pageX;
+        var y = event.touches[0].pageY;
+        //   
+      }
+    },
+
+    touchend: function(e) {
+      console_log("Touch End:");
+      console_log(e);
+    },
+
+    touchmove: function(e) {
+      console_log("Touch Move:");
+      console_log(e);
+    },
+
+    touchcancel: function(e) {
+      console_log("Touch Cancel:");
+      console_log(e);
+    }
+  };
+};
+
+Dots.prototype.setup = function() {
+  console_log("Setting up");
+  this.canvas = this.findOrCreateCanvas("canvas1");
+  this.canvas.setAttribute("width", this.options.width);
+  this.canvas.setAttribute("height", this.options.height);
+  this.currentContext = this.canvas.getContext("2d");
+  this.edges=[];
+  this.configureEventHandlers(this.defaultEventHandlers({preventScrolling: true;}) );
+};
+
+// set up event handlers
+Dots.prototype.configureEventHandlers = function( handlers ) {
+  console_log('configureEventHandlers'); 
+  
+  // from matt.might.net/articles/how-to-native-iphone-ipad-apps-in-javascript/
+  // included a event.preventDefault() in a touchmove event handler to prevent Safari from catching the event
+  // document.body.addEventListener("touchmove", function(event) { event.preventDefault(); }, false ); // tell safari not to move window
+
+  var triggers = Object.keys(handlers); 
+  for (item in triggers) {
+    var trigger=triggers[item];
+    window.dots.canvas.addEventListener(trigger, handlers[trigger], false);
+  }
+};
+
+
+Dots.prototype.findOrCreateCanvas = function(name) {
+  console_log("findOrCreateCanvas");
   var e = document.getElementById("canvas1");
   if (!e) {
     console_log("Creating canvas");
@@ -100,14 +138,6 @@ Dots.prototype.createOrFindCanvas = function(name) {
     document.body.appendChild(e);
   }
   return e;
-};
-
-Dots.prototype.setup = function() {
-  console_log("Setting up");
-  this.canvas = this.createOrFindCanvas("canvas1");
-  this.canvas.setAttribute("width", this.options.width);
-  this.canvas.setAttribute("height", this.options.height);
-  this.currentContext = this.canvas.getContext("2d");
 };
 
   // fillStyle, strokeStyle, lineWidth, and lineJoin are part of the state of the drawing context
@@ -128,13 +158,59 @@ Dots.prototype.eraseGrid = function() {
   this.currentContext.clearRect(0, 0, this.canvas.width, this.canvas.height);
 };
 
+Dots.prototype.nearestGridPoint = function( x, y ) {
+  return {
+    row: Math.round( ( y - this.options.dots.offset_y ) / this.options.dots.spacing ),
+    column: Math.round( ( x - this.options.dots.offset_x ) / this.options.dots.spacing )
+  }
+};
+
+
+Dots.prototype.addEdge = function( gridPointFrom, gridPointTo, player ) {
+  console_log("addEdge");
+  this.edges.push( {
+    from: gridPointFrom,
+    to: gridPointTo,
+    player: player
+  });
+};
+
+Dots.prototype.drawEdge = function( edge ) {
+  console_log("drawEdge");
+  var gridPointFrom = edge.from;
+  var gridPointTo = edge.to;
+  var cxt=this.currentContext;
+  cxt.beginPath();
+  var coordinatesFrom = this.computeRowColumnCoordinates( gridPointFrom.row, gridPointFrom.column );
+  var coordinatesTo = this.computeRowColumnCoordinates( gridPointTo.row, gridPointTo.column );
+  cxt.moveTo( coordinatesFrom.x, coordinatesFrom.y );
+  cxt.lineTo( coordinatesTo.x, coordinatesTo.y );
+  cxt.closePath();
+  ctx.stroke();
+};
+
+Dots.prototype.drawEdges = function() {
+  console_log("drawEdges");
+  for( var i=0; i<this.edges.length; ++i) {
+    this.drawEdge( this.edges[i] );
+  }
+};
+
+Dots.prototype.computeRowColumnCoordinates = function( row, column ) {
+  return {
+    x: column*this.options.dots.spacing+this.options.dots.offset_x,
+    y: row*this.options.dots.spacing+this.options.dots.offset_y
+  };
+};
+
 Dots.prototype.drawDot = function( row, column ) {
   console_log("drawDot");
   var cxt=this.currentContext;
   cxt.beginPath();
+  var coordinates = this.computeRowColumnCoordinates( row, column );
   cxt.arc( 
-      row*this.options.dots.spacing+this.options.dots.offset_y,
-      column*this.options.dots.spacing+this.options.dots.offset_x, 
+      coordinates.x,
+      coordinates.y,
       this.options.dots.radius, 
       0,  // begin angle in radians
       Math.PI*2,  // end angle in radians
@@ -156,7 +232,7 @@ Dots.prototype.setGrid = function() {
     for ( var column =0; column<this.gridColumns; ++column ) {
       this.drawDot( row, column );
     }
-    console_log("Dots.setup(): row="+row+", column="+column);
+    console_log("Dots.setGrid(): row="+row+", column="+column);
   }
 };
 
@@ -189,7 +265,6 @@ Dots.prototype.stopGridAnimation = function() {
 
 var startDots = function() {
   console_log("Starting...");
-  document.body.ontouchmove = block_elastic_scrolling;
   window.dots = new Dots();
   window.dots.setup();
   window.dots.startGridAnimation();
