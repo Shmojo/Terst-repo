@@ -22,7 +22,7 @@ if (!Function.prototype.bind) {
 
 var merge_options = function(from,to) {
   for( property in from) {
-    if ( typeof options[property] == "object" ) {
+    if ( typeof from[property] == "object" ) {
       if ( !to[property] ) 
         to[property] = from[property]
       else
@@ -109,7 +109,7 @@ Dots.prototype.setup = function() {
   this.canvas.setAttribute("height", this.options.height);
   this.currentContext = this.canvas.getContext("2d");
   this.edges=[];
-  this.configureEventHandlers(this.defaultEventHandlers({preventScrolling: true;}) );
+  this.configureEventHandlers(this.defaultEventHandlers( { preventScrolling: true } ) );
 };
 
 // set up event handlers
