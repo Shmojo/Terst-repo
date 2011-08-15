@@ -48,7 +48,7 @@ var Dots = function(options) {
     x:50, y:50, 
     width:800, height: 800, 
     frame_ms: 60,
-    animate_ms: 5000, // ms
+    animate_ms: 300, // ms
     dots: { radius: 5, spacing: 40, offset_x: 20, offset_y: 20 } 
   });
 };
@@ -267,8 +267,9 @@ var startDots = function() {
   console_log("Starting...");
   window.dots = new Dots();
   window.dots.setup();
-  window.dots.startGridAnimation();
-  window.setTimeout( window.dots.stopGridAnimation.bind(window.dots), dots.options.animate_ms );
+  window.dots.setGrid();
+//  window.dots.startGridAnimation();
+//  window.setTimeout( window.dots.stopGridAnimation.bind(window.dots), dots.options.animate_ms );
 };
 
 console_log("Loading...");
