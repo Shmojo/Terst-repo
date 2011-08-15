@@ -53,6 +53,9 @@ var Dots = function(options) {
   });
 };
 
+// for debugging and development
+var player='Bob';
+
 // Touch events
 // on~
   // touchstart, touchend, touchmove
@@ -81,25 +84,50 @@ Dots.prototype.defaultEventHandlers = function(options) {
         //   find closest point to evet touch down
         var x = event.touches[0].pageX;
         var y = event.touches[0].pageY;
+        this.gridPointFrom = this.nearestGridPoint( x, y );
         //   
       }
-    },
+    }.bind(_options.game),
 
     touchend: function(e) {
       console_log("Touch End:");
       console_log(e);
-    },
+      if (this.isLegalMove()) {
+            // still doesn't prevent diagonals
+        this.addEdge( this.gridPointFrom, this.gridPointTo, player );
+      }
+      this.drawGrid();
+      this.drawEdges();
+    }.bind(_options.game),
 
     touchmove: function(e) {
       console_log("Touch Move:");
       console_log(e);
-    },
+
+      var x = event.touches[0].pageX;
+      var y = event.touches[0].pageY;
+      this.gridPointTo = this.nearestGridPoint( x, y );
+      
+      // if (this.isLegalMove()) {
+        this.drawGrid();
+        this.drawEdges(); // performance hit!
+        this.drawEdge( this.buildEdge( this.gridPointFrom, this.gridPointTo, player ), { strokeStyle: this.isLegalMove() ? "black" : "red" } );
+      // }
+
+    }.bind(_options.game),
 
     touchcancel: function(e) {
       console_log("Touch Cancel:");
       console_log(e);
-    }
+    }.bind(_options.game)
   };
+};
+
+Dots.prototype.isLegalMove = function() {
+      return (( this.gridPointTo.row >= this.gridPointFrom.row - 1 && this.gridPointTo.row <= this.gridPointFrom.row + 1 ) && 
+          ( this.gridPointTo.column >= this.gridPointFrom.column - 1 && this.gridPointTo.column <= this.gridPointFrom.column + 1 ) && 
+          ( this.gridPointTo.row != this.gridPointFrom.row || this.gridPointTo.column != this.gridPointFrom.column) &&
+          ! ( this.gridPointTo.row != this.gridPointFrom.row && this.gridPointTo.column != this.gridPointFrom.column)  );
 };
 
 Dots.prototype.setup = function() {
@@ -109,7 +137,9 @@ Dots.prototype.setup = function() {
   this.canvas.setAttribute("height", this.options.height);
   this.currentContext = this.canvas.getContext("2d");
   this.edges=[];
-  this.configureEventHandlers(this.defaultEventHandlers( { preventScrolling: true } ) );
+  this.configureEventHandlers(this.defaultEventHandlers( { preventScrolling: true, game: this } ) );
+  this.setGrid();
+  this.drawGrid();
 };
 
 // set up event handlers
@@ -166,27 +196,36 @@ Dots.prototype.nearestGridPoint = function( x, y ) {
 };
 
 
-Dots.prototype.addEdge = function( gridPointFrom, gridPointTo, player ) {
-  console_log("addEdge");
-  this.edges.push( {
+Dots.prototype.buildEdge = function( gridPointFrom, gridPointTo, player ) {
+  console_log("buildEdge");
+  return {
     from: gridPointFrom,
     to: gridPointTo,
     player: player
-  });
+  };
 };
 
-Dots.prototype.drawEdge = function( edge ) {
+Dots.prototype.addEdge = function( gridPointFrom, gridPointTo, player ) {
+  console_log("addEdge");
+  this.edges.push( this.buildEdge( gridPointFrom, gridPointTo, player ) );
+};
+
+Dots.prototype.drawEdge = function( edge, opts ) {
   console_log("drawEdge");
+  var options = merge_options( opts||{}, { 
+    strokeStyle: 'black'
+  });
   var gridPointFrom = edge.from;
   var gridPointTo = edge.to;
-  var cxt=this.currentContext;
-  cxt.beginPath();
+  var context=this.currentContext;
+  context.beginPath();
   var coordinatesFrom = this.computeRowColumnCoordinates( gridPointFrom.row, gridPointFrom.column );
   var coordinatesTo = this.computeRowColumnCoordinates( gridPointTo.row, gridPointTo.column );
-  cxt.moveTo( coordinatesFrom.x, coordinatesFrom.y );
-  cxt.lineTo( coordinatesTo.x, coordinatesTo.y );
-  cxt.closePath();
-  ctx.stroke();
+  context.moveTo( coordinatesFrom.x, coordinatesFrom.y );
+  context.lineTo( coordinatesTo.x, coordinatesTo.y );
+  context.closePath();
+  context.strokeStyle = options.strokeStyle;
+  context.stroke();
 };
 
 Dots.prototype.drawEdges = function() {
@@ -223,18 +262,22 @@ Dots.prototype.drawDot = function( row, column ) {
 Dots.prototype.setGrid = function() {
   console_log("setGrid");
 
-  this.eraseGrid();
-
   this.gridRows = Math.floor( (this.options.height - this.options.dots.spacing) / this.options.dots.spacing);
   this.gridColumns = Math.floor( (this.options.width - this.options.dots.spacing) / this.options.dots.spacing);
+};
 
+Dots.prototype.drawGrid = function() {
+  console_log("drawGrid");
+
+  this.eraseGrid();
   for ( var row =0; row<this.gridRows; ++row ) {
     for ( var column =0; column<this.gridColumns; ++column ) {
       this.drawDot( row, column );
     }
-    console_log("Dots.setGrid(): row="+row+", column="+column);
+    console_log("Dots.drawGrid(): row="+row+", column="+column);
   }
 };
+
 
 Dots.prototype.animateGrid = function() { 
   console_log( "animateGrid");
@@ -248,6 +291,7 @@ Dots.prototype.animateGrid = function() {
   };
   jiggle.bind(this)();
   this.setGrid();
+  this.drawGrid();
 };
 
 Dots.prototype.startGridAnimation = function() {
@@ -267,7 +311,6 @@ var startDots = function() {
   console_log("Starting...");
   window.dots = new Dots();
   window.dots.setup();
-  window.dots.setGrid();
 //  window.dots.startGridAnimation();
 //  window.setTimeout( window.dots.stopGridAnimation.bind(window.dots), dots.options.animate_ms );
 };
