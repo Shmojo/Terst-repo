@@ -59,7 +59,11 @@ var Dots = function(options) {
 };
 
 // for debugging and development
-var player='Bob';
+var player={ 
+  name: 'Bob', 
+  color: 'red', 
+  initial: 'B'
+};
 
 // Touch events
 // on~
@@ -255,7 +259,11 @@ Dots.prototype.addEdge = function( gridPointFrom, gridPointTo, player ) {
 Dots.prototype.drawEdge = function( edge, opts ) {
   console_log("drawEdge");
   var options = merge_options( opts||{}, { 
-    strokeStyle: 'black'
+    strokeStyle: 'black',
+    lineWidth: 3
+    // lineCap = type
+    // lineJoin = type
+    // miterLimit = value
   });
   var gridPointFrom = edge.from;
   var gridPointTo = edge.to;
@@ -267,6 +275,7 @@ Dots.prototype.drawEdge = function( edge, opts ) {
   context.lineTo( coordinatesTo.x, coordinatesTo.y );
   context.closePath();
   context.strokeStyle = options.strokeStyle;
+  context.lineWidth = options.lineWidth;
   context.stroke();
 };
 
