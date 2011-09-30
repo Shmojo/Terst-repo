@@ -18,7 +18,11 @@ if (!Function.prototype.bind) {
 
     return fBound;
   };
-}
+};
+
+var do_nothing = function() {
+  return;
+};
 
 var merge_options = function(from,to) {
   for( property in from) {
@@ -45,9 +49,10 @@ var supportsTouch = 'createTouch' in document;
 
 var Dots = function(options) {
   this.options = merge_options( options||{}, { 
-    x:50, y:50, 
-    width:800, height: 800, 
+    x:70, y:70, 
+    width:768, height: 946, 
     frame_ms: 60,
+    animate_intro: false,
     animate_ms: 300, // ms
     dots: { radius: 5, spacing: 40, offset_x: 20, offset_y: 20 } 
   });
@@ -73,7 +78,44 @@ Dots.prototype.defaultEventHandlers = function(options) {
       // event properties:
       // ( touches[] | targetTouches[] | changedTouches[] ) 
       // each of these have properties { clientX, clientY, screenX, screenY, pageX, pageY, target, identifier }
-  return { 
+  return {
+ 
+     mousedown: function(e) {
+      console_log("Mouse Down:");
+       var x = e.pageX;
+       var y = e.pageY;
+       this.gridPointFrom = this.nearestGridPoint( x, y );
+     }.bind(_options.game),
+ 
+     mouseup: function(e) {
+       console_log("Mouse Up:");
+       console_log(e);
+       if (this.isLegalMove()) {
+         this.addEdge( this.gridPointFrom, this.gridPointTo, player );
+       }
+       this.drawGrid();
+       this.drawEdges();
+       delete this.gridPointFrom;
+     }.bind(_options.game),
+ 
+     mousemove: function(e) { 
+       console_log("Mouse Move:");
+       console_log(e);
+ 
+       if (!this.gridPointFrom) {
+         return;
+       }
+
+       var x = e.pageX;
+       var y = e.pageY;
+       this.gridPointTo = this.nearestGridPoint( x, y );
+       
+       this.drawGrid();
+       this.drawEdges(); // performance hit!
+       this.drawEdge( this.buildEdge( this.gridPointFrom, this.gridPointTo, player ), { strokeStyle: this.isLegalMove() ? "black" : "red" } );
+ 
+     }.bind(_options.game),
+    
     touchstart: function(e) {
       console_log("Touch Start:");
 
@@ -93,11 +135,11 @@ Dots.prototype.defaultEventHandlers = function(options) {
       console_log("Touch End:");
       console_log(e);
       if (this.isLegalMove()) {
-            // still doesn't prevent diagonals
         this.addEdge( this.gridPointFrom, this.gridPointTo, player );
       }
       this.drawGrid();
       this.drawEdges();
+      delete this.gridPointFrom;
     }.bind(_options.game),
 
     touchmove: function(e) {
@@ -279,6 +321,7 @@ Dots.prototype.drawGrid = function() {
 };
 
 
+
 Dots.prototype.animateGrid = function() { 
   console_log( "animateGrid");
   var jiggle = function() {
@@ -307,12 +350,17 @@ Dots.prototype.stopGridAnimation = function() {
   }
 };
 
+Dots.prototype.animateIntro = function() {
+  if (this.options.animate_intro) {
+    this.startGridAnimation();
+    window.setTimeout( this.stopGridAnimation.bind(this), this.options.animate_ms );
+  }
+};
+
 var startDots = function() {
   console_log("Starting...");
   window.dots = new Dots();
   window.dots.setup();
-//  window.dots.startGridAnimation();
-//  window.setTimeout( window.dots.stopGridAnimation.bind(window.dots), dots.options.animate_ms );
 };
 
 console_log("Loading...");
