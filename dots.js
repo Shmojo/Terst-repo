@@ -1,4 +1,5 @@
 // from https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
+// this._edges={};
 if (!Function.prototype.bind) {
 
   Function.prototype.bind = function (oThis) {
@@ -110,13 +111,18 @@ Dots.prototype.defaultEventHandlers = function(options) {
          return;
        }
 
+       this.drawGrid();
+       this.drawEdges(); // performance hit!
+
        var x = e.pageX;
        var y = e.pageY;
        this.gridPointTo = this.nearestGridPoint( x, y );
-       
-       this.drawGrid();
-       this.drawEdges(); // performance hit!
-       this.drawEdge( this.buildEdge( this.gridPointFrom, this.gridPointTo, player ), { strokeStyle: this.isLegalMove() ? "black" : "red" } );
+       if (this.pointEquals(this.gridPointTo, this.gridPointFrom)) {
+         this.drawLoop( this.gridPointFrom, { x: x, y: y }, { strokeStyle: this.isLegalMove() ? "black" : "red" } );
+       }
+       else {
+         this.drawEdge( this.buildEdge( this.gridPointFrom, this.gridPointTo, player ), { strokeStyle: this.isLegalMove() ? "black" : "red" } );
+       }
  
      }.bind(_options.game),
     
@@ -174,6 +180,10 @@ Dots.prototype.isLegalMove = function() {
     return false;
   }
 
+  if (this.hasEdge( this.gridPointFrom, this.gridPointTo )) {
+    return false
+  }
+
   return (( this.gridPointTo.row >= this.gridPointFrom.row - 1 && this.gridPointTo.row <= this.gridPointFrom.row + 1 ) && 
           ( this.gridPointTo.column >= this.gridPointFrom.column - 1 && this.gridPointTo.column <= this.gridPointFrom.column + 1 ) && 
           ( this.gridPointTo.row != this.gridPointFrom.row || this.gridPointTo.column != this.gridPointFrom.column) &&
@@ -187,6 +197,7 @@ Dots.prototype.setup = function() {
   this.canvas.setAttribute("height", this.options.height);
   this.currentContext = this.canvas.getContext("2d");
   this.edges=[];
+  this._edges={};
   this.configureEventHandlers(this.defaultEventHandlers( { preventScrolling: true, game: this } ) );
   this.setGrid();
   this.drawGrid();
@@ -238,11 +249,18 @@ Dots.prototype.eraseGrid = function() {
   this.currentContext.clearRect(0, 0, this.canvas.width, this.canvas.height);
 };
 
-Dots.prototype.nearestGridPoint = function( x, y ) {
+Dots.prototype.buildGridPoint = function( row, column ) {
   return {
-    row: Math.round( ( y - this.options.dots.offset_y ) / this.options.dots.spacing ),
-    column: Math.round( ( x - this.options.dots.offset_x ) / this.options.dots.spacing )
-  }
+    row: row,
+    column: column
+  };
+};
+
+Dots.prototype.nearestGridPoint = function( x, y ) {
+  return this.buildGridPoint( 
+    Math.round( ( y - this.options.dots.offset_y ) / this.options.dots.spacing ),
+    Math.round( ( x - this.options.dots.offset_x ) / this.options.dots.spacing )
+  );
 };
 
 
@@ -255,10 +273,54 @@ Dots.prototype.buildEdge = function( gridPointFrom, gridPointTo, player ) {
   };
 };
 
+Dots.prototype.pointEquals = function( point1, point2 ) {
+  return ( (point1.row == point2.row && point1.column == point2.column) );
+};
+
+Dots.prototype.edgeEquals = function( edge1, edge2 ) {
+  return ( 
+    ( this.pointEquals( edge1.from, edge2.from ) && this.pointEquals( edge1.to, edge2.to ) ) ||
+    ( this.pointEquals( edge1.from, edge2.to ) && this.pointEquals( edge1.to, edge2.from ) )
+  );
+};
+
 Dots.prototype.addEdge = function( gridPointFrom, gridPointTo, player ) {
   console_log("addEdge");
-  this.edges.push( this.buildEdge( gridPointFrom, gridPointTo, player ) );
+  var edge = this.buildEdge( gridPointFrom, gridPointTo, player );
+  this.edges.push( edge );
 };
+
+Dots.prototype.hasEdge = function( gridPointFrom, gridPointTo ) {
+  for (var i=0; i<this.edges.length; ++i) {
+    if ( this.edgeEquals( this.edges[i], this.buildEdge(gridPointFrom, gridPointTo) ) ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+
+Dots.prototype.drawLoop = function( gridPointFrom, simple_point, opts ) {
+  console_log("drawEdge");
+  var options = merge_options( opts||{}, { 
+    strokeStyle: 'black',
+    lineWidth: 3
+    // lineCap = type
+    // lineJoin = type
+    // miterLimit = value
+  });
+  var context=this.currentContext;
+  context.beginPath();
+  var coordinatesFrom = this.computeRowColumnCoordinates( gridPointFrom.row, gridPointFrom.column );
+  var coordinatesTo = simple_point;
+  context.moveTo( coordinatesFrom.x, coordinatesFrom.y );
+  context.lineTo( coordinatesTo.x, coordinatesTo.y );
+  context.closePath();
+  context.strokeStyle = options.strokeStyle;
+  context.lineWidth = options.lineWidth;
+  context.stroke();
+};
+
 
 Dots.prototype.drawEdge = function( edge, opts ) {
   console_log("drawEdge");
