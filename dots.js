@@ -170,7 +170,11 @@ Dots.prototype.defaultEventHandlers = function(options) {
 };
 
 Dots.prototype.isLegalMove = function() {
-      return (( this.gridPointTo.row >= this.gridPointFrom.row - 1 && this.gridPointTo.row <= this.gridPointFrom.row + 1 ) && 
+  if (!this.gridPointTo || !this.gridPointFrom) {
+    return false;
+  }
+
+  return (( this.gridPointTo.row >= this.gridPointFrom.row - 1 && this.gridPointTo.row <= this.gridPointFrom.row + 1 ) && 
           ( this.gridPointTo.column >= this.gridPointFrom.column - 1 && this.gridPointTo.column <= this.gridPointFrom.column + 1 ) && 
           ( this.gridPointTo.row != this.gridPointFrom.row || this.gridPointTo.column != this.gridPointFrom.column) &&
           ! ( this.gridPointTo.row != this.gridPointFrom.row && this.gridPointTo.column != this.gridPointFrom.column)  );
